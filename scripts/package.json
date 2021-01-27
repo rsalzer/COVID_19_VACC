@@ -1,0 +1,15 @@
+{
+  "name": "bagvaccinescraper",
+  "version": "1.0.0",
+  "description": "scrapes and parses the bag-vaccine-pdf",
+  "main": "bagpdfscraper.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node bagpdfscraper.js"
+  },
+  "author": "Robert Salzer",
+  "license": "ISC",
+  "dependencies": {
+    "pdf-text": "^0.4.0"
+  }
+}
