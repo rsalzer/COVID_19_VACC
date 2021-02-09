@@ -105,7 +105,8 @@ var date;
 
 async function parseData() {
   const administered=await csv().fromFile("administered.csv");
-  const delivered=await csv().fromFile("delivered.csv");
+  let delivered=await csv().fromFile("delivered.csv");
+  delivered = delivered.filter(d => d.type == "COVID19VaccDosesDelivered");
   date = administered[0].date;
   console.log("Date: "+date);
   delivered.forEach((item, i) => {
