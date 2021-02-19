@@ -8,3 +8,5 @@ making Swiss FOPH-vaccination data machine-readable before they publish it in a 
 |ncumul_delivered|sum of vaccines delivered to the geounit till the date|459700|
 |ncumul_vacc|number of vaccines vaccinated in the geounit till the date|169783|
 |ncumul_vacc_per100pop|number of vaccines vaccinated in the geounit till the date per 100 population|1.97|
+|ncumul_fully_vacc|number of people who are fully vaccinated (2 doses at the moment)|83842|
+|ncumul_fully_vacc_per100pop|number of people who are fully vaccinated per 100 population|1.97|
