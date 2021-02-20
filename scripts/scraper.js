@@ -63,7 +63,8 @@ downloadJSON(bagMetaLocation);
               var dataVersion = metaFile.dataVersion;
               var deliveredSource = metaFile.sources.individual.csv.vaccDosesDelivered;
               var administeredSource = metaFile.sources.individual.csv.vaccDosesAdministered;
-              downloadFiles(deliveredSource, administeredSource);
+              var fullyVaccSource = metaFile.sources.individual.csv.fullyVaccPersons;
+              downloadFiles(deliveredSource, administeredSource, fullyVaccSource);
           } catch (error) {
               console.error(error.message);
           };
@@ -74,7 +75,7 @@ downloadJSON(bagMetaLocation);
   });
 }
 
-function downloadFiles(deliveredSource, administeredSource) {
+function downloadFiles(deliveredSource, administeredSource, fullyVaccSource) {
   console.log("Downloading: "+deliveredSource);
   const file = fs.createWriteStream("delivered.csv");
   const request = https.get(deliveredSource, function(response) {
@@ -82,12 +83,12 @@ function downloadFiles(deliveredSource, administeredSource) {
 
       file.on('finish', function() {
         console.log("Finished downloading delivered");
-        downloadAdministered(administeredSource);
+        downloadAdministered(administeredSource, fullyVaccSource);
       });
   });
 }
 
-function downloadAdministered(administeredSource) {
+function downloadAdministered(administeredSource, fullyVaccSource) {
   console.log("Downloading: "+administeredSource);
   const file = fs.createWriteStream("administered.csv");
   const request = https.get(administeredSource, function(response) {
@@ -95,6 +96,19 @@ function downloadAdministered(administeredSource) {
 
       file.on('finish', function() {
         console.log("Finished downloading administered");
+        downloadFullyVacc(fullyVaccSource)
+      });
+  });
+}
+
+function downloadFullyVacc(fullyVaccSource) {
+  console.log("Downloading: "+fullyVaccSource);
+  const file = fs.createWriteStream("fullyVac.csv");
+  const request = https.get(fullyVaccSource, function(response) {
+      response.pipe(file);
+
+      file.on('finish', function() {
+        console.log("Finished downloading fully vacc");
         parseData();
       });
   });
@@ -104,10 +118,13 @@ var data = {};
 var date;
 
 async function parseData() {
-  const administered=await csv().fromFile("administered.csv");
+  let administered=await csv().fromFile("administered.csv");
   let delivered=await csv().fromFile("delivered.csv");
-  delivered = delivered.filter(d => d.type == "COVID19VaccDosesDelivered");
-  date = administered[0].date;
+  let fullyVacc=await csv().fromFile("fullyVac.csv");
+  date = "2021-02-14"; //administered[administered.length-1].date;
+  delivered = delivered.filter(d => (d.type == "COVID19VaccDosesDelivered" && d.date==date));
+  administered = administered.filter(d => (d.date==date));
+  fullyVacc = fullyVacc.filter(d => (d.date==date && d.granularity=="summary"));
   console.log("Date: "+date);
   delivered.forEach((item, i) => {
     let canton = item.geoRegion;
@@ -128,30 +145,47 @@ async function parseData() {
         data[canton].percentage = parseFloat(item.per100PersonsTotal);
       }
     });
+    fullyVacc.forEach((item, i) => {
+      let canton = item.geoRegion;
+      if(canton && canton!="") {
+        if(!data[canton]) {
+           data[canton] = {};
+         }
+         data[canton].fullyVacc = parseInt(item.sumTotal);
+         data[canton].fullyVaccPercentage = parseFloat(item.per100PersonsTotal);
+       }
+     });
     checkPlausability();
 }
 
 function checkPlausability() {
   var sumdelivered = 0;
   var suminjected = 0;
+  var sumfullyvacc = 0;
   for (var canton in data) {
     if(canton!="CHFL" && canton!="CH") {
       sumdelivered += data[canton].delivered;
       suminjected += data[canton].injected;
+      sumfullyvacc += data[canton].fullyVacc;
     }
   }
   console.log("Sum delivered: "+sumdelivered);
   console.log("CHFL delivered: "+data.CHFL.delivered);
   console.log("Sum injected: "+suminjected);
   console.log("CHFL delivered: "+data.CHFL.injected);
+  console.log("Sum fullyVac: "+sumfullyvacc);
+  console.log("CHFL fullyVac: "+data.CHFL.fullyVacc);
   let plausibilitySumDelivered = sumdelivered==data.CHFL.delivered;
   let plausabilitySumInjected = suminjected==data.CHFL.injected;
+  let plausabilityFullyVacc = sumfullyvacc==data.CHFL.fullyVacc;
   if(plausibilitySumDelivered) console.log('\x1b[42m%s\x1b[0m', "Plausability Sum Delivered: CHECK");
   else console.log('\x1b[41m%s\x1b[0m', "CAUTION: Plausability Sum Delivered: FAILED");
   if(plausabilitySumInjected) console.log('\x1b[42m%s\x1b[0m', "Plausability Sum Injected: CHECK");
   else console.log('\x1b[41m%s\x1b[0m', "CAUTION: Plausability Sum Injected: FAILED");
+  if(plausabilityFullyVacc) console.log('\x1b[42m%s\x1b[0m', "Plausability Sum FullyVacc: CHECK");
+  else console.log('\x1b[41m%s\x1b[0m', "CAUTION: Plausability Sum FullyVacc: FAILED");
 
-  if(plausabilitySumInjected && plausibilitySumDelivered) {
+  if(plausabilitySumInjected && plausibilitySumDelivered && plausabilityFullyVacc) {
     console.log('\x1b[42m%s\x1b[0m', "EVERYTHING PLAUSIBLE");
     createCSV();
   }
@@ -166,10 +200,13 @@ function createCSV() {
       csv += canton+",";
       csv += data[canton].delivered+","
       csv += data[canton].injected+","
-      if(data[canton].percentage) csv += data[canton].percentage;
+      csv += data[canton].percentage+",";
+      csv += data[canton].fullyVacc+",";
+      csv += data[canton].fullyVaccPercentage;
       csv += "\n";
   }
   console.log(csv);
+  return;
   let oldPath = 'administered.csv'
   let newPath = '../archive/'+date+'_'+oldPath;
   fs.rename(oldPath, newPath, function (err) {
