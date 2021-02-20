@@ -121,7 +121,7 @@ async function parseData() {
   let administered=await csv().fromFile("administered.csv");
   let delivered=await csv().fromFile("delivered.csv");
   let fullyVacc=await csv().fromFile("fullyVac.csv");
-  date = "2021-02-14"; //administered[administered.length-1].date;
+  date = administered[administered.length-1].date;
   delivered = delivered.filter(d => (d.type == "COVID19VaccDosesDelivered" && d.date==date));
   administered = administered.filter(d => (d.date==date));
   fullyVacc = fullyVacc.filter(d => (d.date==date && d.granularity=="summary"));
