@@ -2,7 +2,7 @@
 making Swiss FOPH-vaccination data machine-readable before they publish it in a reasonable format
 
 # DEPRECATED:
-AS OF APRIL 6TH 2021 THIS REPO IS NOT LONGER MAINTAINED
+## AS OF APRIL 6TH 2021 THIS REPO IS NOT LONGER MAINTAINED
 The data can be found and downloaded directly on the Covid19-Dashboard of the Federal Office of Public Health: https://covid19.admin.ch
 
 |field|description|example|
